@@ -42,6 +42,7 @@
     let T;
     let x,y;
     let stop = false;
+    let gameOver=false;
     let speed = Date.now();
     let canvas = document.querySelector('canvas');
     let c = canvas.getContext('2d');
@@ -83,7 +84,21 @@
             }
         }
     }
-
+    function lockState(array, value) {
+        for(let i=0;i<array.length;i++){
+            for(let j=0;j<array[i].length;j++){
+                if(array[i][j]){
+                    if(i+y < 0){
+                        alert('Game Over baby')
+                        gameOver = true;
+                        return;
+                    }
+                    board[i+y][j+x] = 1;
+                }
+            }
+        }
+        // destroyRow(T.coOrdinate);
+    }
     function rotate(array, dir) {
         var newArray = new Array(array.length)
         for(let i=0;i<array.length;i++){
@@ -101,7 +116,7 @@
         for(let i=0;i<T.length;i++){
             for(let j=0;j<T.length;j++){
                 if(T[i][j] > 0){
-                    board[i+y][j+x] = 1;
+                    // board[i+y][j+x] = 1;
                     drawSquare(j+x,i+y,'red');
                 }
             }
@@ -114,7 +129,7 @@
             for(let j=0;j<array.length;j++){
                 if(array[i][j] > 0){
                     //  show ? console.log(i+y,j+x) : null;
-                    board[i+y][j+x] = 0;
+                    // board[i+y][j+x] = 0;
                     // c.clearRect(0,0,canvas.width,canvas.height)
                     drawSquare(j+x,i+y,color ? color : 'white');
                 }
@@ -130,9 +145,12 @@
                     }
                     let newX = (j+x+a)*dimentions + dimentions;
                     let newY = (i+y+b)*dimentions + dimentions;
-                    if(newX<=0 || newX>canvas.width || newY<0 || newY>canvas.height){
+                    if(newX<=0 || newX>canvas.width || newY>canvas.height){
                         console.log(board[board.length - 1])
                         return true;
+                    }
+                    if(newY<=0){
+                        continue;
                     }
                     if(board[i+y+b][j+x+a]){
                         console.log('yup')
@@ -158,15 +176,19 @@
     }
     function newBlock() {
         T = shape[(Math.floor(Math.random()*10))%shape.length];
-        x=0;y=0;
+        x=0;y=-2;
     }
     newBlock();
     function animate() {
         let speed2 = Date.now();
-        requestAnimationFrame(animate);
+        if(!gameOver)
+             requestAnimationFrame(animate);
         if(speed2 - speed > 1000 && !pause){
             speed = speed2;
-            !move(0,1) ? newBlock() : null;
+            if(!move(0,1)) {
+                lockState(T,1);
+                newBlock();
+            }
         }
     }
     window.addEventListener('keydown', (e) => {
@@ -192,7 +214,10 @@
                 break;
             case 40: //down
                 speed = Date.now();
-                !move(0,1) ? newBlock() : null;
+                if(!move(0,1)) {
+                    lockState(T,1);
+                    newBlock();
+                }
                 break;
         }
     })
