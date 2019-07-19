@@ -2,6 +2,7 @@
     let pause = false;
     let span = document.querySelector('span');
     span.innerHTML = 0;
+    let blockHistory = [];
     let blockColor = ['#004d00','#4d004d','#b30000','#0000ff','#0d0d0d','#000080', '#333300'];
     let undo = [];
     let redo = [];
@@ -81,14 +82,38 @@
         }
     }
     drawBoard();
+    function destroySingleRow(i){
+        let removedRow = board.splice(i,1);
+        board.unshift(new Array(colums).fill(-1));
+        return removedRow;
+    }
+    function createSingleRow(i, row){
+        // console.log('dyuigfcvb')
+        console.log(i+1,row);
+        board.splice(i+1,0,row);
+        // board.shift();
+        console.log(board);
+    }
     function destroyRow(array){
         for(let i=0;i<board.length;i++){
             if(!board[i].includes(-1)){
-                board.splice(i,1);
-                board.unshift(new Array(colums).fill(-1));
+                undo.push({
+                    type: 2,
+                    index: i,
+                    row: destroySingleRow(i),
+                });
                 score += 50;
                 span.innerHTML = score;
                 drawBoard();
+            }
+        }
+    }
+    function unlockState(array){
+        for(let i=0;i<array.length;i++){
+            for(let j=0;j<array[i].length;j++){
+                if(array[i][j]){
+                    board[i+y][j+x] = -1;
+                }
             }
         }
     }
@@ -105,6 +130,11 @@
                 }
             }
         }
+        blockHistory.push({
+            index: shapeIndex,
+            x,
+            y, 
+        })
     }
     function rotate(array, dir) {
         var newArray = new Array(array.length)
@@ -135,13 +165,25 @@
         }
     }
     function undoStep(){
-        if(undo.length && undo[undo.length - 1].type === 1){
-            move(undo[undo.length - 1].move[0], undo[undo.length - 1].move[1], 1);
-            speed = Date.now();
-            let removed = undo.splice(undo.length - 1,1)[0];
-            removed.move[0] *= -1;
-            removed.move[1] *= -1;
-            redo.push(removed);
+        // console.log(undo);
+        let undoOpertionOn = undo[undo.length - 1];
+        switch(undoOpertionOn.type){
+            case 0:
+                
+                break;
+            case 1:
+                move(undoOpertionOn.move[0], undoOpertionOn.move[1], 1);
+                speed = Date.now();
+                let removed = undo.splice(undo.length - 1,1)[0];
+                removed.move[0] *= -1;
+                removed.move[1] *= -1;
+                redo.push(removed);
+                break;
+            case 2:
+                createSingleRow(undoOpertionOn.index, undoOpertionOn.row[0]);
+                undo.splice(undo.length-1,1);
+                drawBoard();
+
         }
     }
     function draw() {
@@ -206,7 +248,8 @@
         return !coll;
     }
     function newBlock() {
-        shapeIndex = (Math.floor(Math.random()*10))%shape.length;
+        // (Math.floor(Math.random()*10))%shape.length
+        shapeIndex = 1;
         T = shape[shapeIndex];
         x=0;y=-2;
     }
@@ -220,8 +263,8 @@
             if(!move(0,1,0)) {
                 lockState(T,shapeIndex);
                 destroyRow(T);
-                undo=[];
-                redo=[];
+                // undo=[];
+                // redo=[];
                 newBlock();
             }
         }
@@ -251,18 +294,18 @@
                 case 40: //down
                     speed = Date.now();
                     if(!move(0,1,0)) {
-                        undo=[];
-                        redo=[];
+                        // undo=[];
+                        // redo=[];
                         lockState(T,shapeIndex);
                         destroyRow(T);
                         newBlock();
                     }
                     break;
                 case 85:
-                    undoStep();
+                    // undoStep();
                     break;
                 case 82:
-                    redoStep();
+                    // redoStep();
                 default:
                     console.log(e.keyCode)
             }
