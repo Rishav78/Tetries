@@ -34,8 +34,6 @@
             if(!shape.move(0,1,0)) {
                 board.lockState(shape.activeShape,shape.activeShapeIndex);
                 board.destroyRow(shape.activeShape);
-                // shape.undo.reset();
-                // shape.redo.reset();
                 shape.newBlock();
             }
         }
@@ -88,8 +86,6 @@
                 case 40: //down
                     speed = Date.now();
                     if(!shape.move(0,1,0)) {
-                        // shape.undo.reset();
-                        // shape.redo.reset();
                         board.lockState(shape.activeShape,shape.activeShapeIndex);
                         board.destroyRow(shape.activeShape);
                         shape.newBlock();
@@ -103,7 +99,6 @@
             }
         }
     })
-    // animate();
 
     //-----------------------------------------------------------------------------------------------------------------------------------//
 
@@ -199,6 +194,8 @@
             })
         }
     }
+
+
     //-----------------------------------------------------------------------------------------------------------------------------------//
 
     function GraphicsDrawer(){
@@ -288,8 +285,7 @@
                 this.x = block.x;
                 this.y = block.y;
             }else{
-                // (Math.floor(Math.random()*10))%this.availableShapes.length
-                this.activeShapeIndex = 1;
+                this.activeShapeIndex = (Math.floor(Math.random()*10))%this.availableShapes.length;
                 this.activeShape = this.availableShapes[this.activeShapeIndex];
                 this.x=0;
                 this.y=-2;
