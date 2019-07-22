@@ -1,4 +1,4 @@
-// (function(){
+(function(){
     let span = document.querySelector('span');
 
     let canvas = document.querySelector('canvas');
@@ -100,8 +100,6 @@
                     break;
                 case 82:
                     shape.redoStep();
-                default:
-                    console.log(e.keyCode)
             }
         }
     })
@@ -141,15 +139,21 @@
             this.drawBoard();
         }
 
+        this.deleteRow = function(i) {
+            let deletedRow = this.board.splice(i,1);
+            this.board.unshift(new Array(this.colums).fill(-1));
+            return deletedRow;
+        }
+
         this.destroyRow = function(array) {
             let destroyedRows = [];
             for(let i=0;i<this.board.length;i++){
                 if(!this.board[i].includes(-1)){
                     destroyedRows.push({
-                        row: this.board.splice(i,1)[0],
+                        row: this.deleteRow(i)[0],
                         index: i,
                     });
-                    this.board.unshift(new Array(this.colums).fill(-1));
+                    
                     score += 50;
                     span.innerHTML = score;
                     this.drawBoard();
@@ -172,7 +176,6 @@
         }
 
         this.lockState = function(array, value) {
-            // let block = shape.undo.pop();
             for(let i=0;i<array.length;i++){
                 for(let j=0;j<array[i].length;j++){
                     if(array[i][j]){
@@ -285,8 +288,8 @@
                 this.x = block.x;
                 this.y = block.y;
             }else{
-                // 
-                this.activeShapeIndex = (Math.floor(Math.random()*10))%this.availableShapes.length;
+                // (Math.floor(Math.random()*10))%this.availableShapes.length
+                this.activeShapeIndex = 1;
                 this.activeShape = this.availableShapes[this.activeShapeIndex];
                 this.x=0;
                 this.y=-2;
@@ -360,10 +363,30 @@
 
         this.redoStep = function() {
             if(!this.redo.isEmpty()){
+                speed = Date.now();
                 let step = this.redo.pop();
-                if(step.type === 1){
-                    shape.move(step.move[0], step.move[1], 1);
-                    speed = Date.now();
+                switch(step.type){
+                    case 0: // rotate
+                        drawer.unDraw(this.activeShape);
+                        this.rotate(step.dir);
+                        drawer.draw(this.activeShape);
+                        break;
+                    case 1:  // move #DONE
+                        this.move(step.move[0], step.move[1], 1);
+                        step.move[0] *= -1;
+                        step.move[1] *= -1;
+                        this.undo.push(step);
+                        break;
+                    case 2: //delete created row
+                        step.rows.forEach((value) => {
+                            board.deleteRow(value.index);
+                            board.drawBoard();
+                        })
+                        break;
+                    case 3: // getback block and lock state
+                        board.lockState(shape.activeShape, shape.activeShapeIndex);
+                        shape.newBlock(step.block);
+                        break;
                 }
             }
         }
@@ -388,10 +411,21 @@
                         break;
                     case 2:
                         board.createRow(step.rows);
+                        this.redo.push(step);
                         break;
                     case 3:
+                        let r = {
+                            type: 3,
+                            block: {
+                                shape: this.activeShape,
+                                index: this.activeShapeIndex,
+                                x: this.x,
+                                y: this.y,
+                            }
+                        } 
                         shape.newBlock(step.block);
                         board.unlockState(shape.activeShape);
+                        this.redo.push(r);
                         break;
                 }
             }
@@ -402,4 +436,4 @@
     //-----------------------------------------------------------------------------------------------------------------------------------//
 
 
-// })();
+})();
