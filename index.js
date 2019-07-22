@@ -1,4 +1,4 @@
-(function(){
+// (function(){
     let span = document.querySelector('span');
 
     let canvas = document.querySelector('canvas');
@@ -34,8 +34,8 @@
             if(!shape.move(0,1,0)) {
                 board.lockState(shape.activeShape,shape.activeShapeIndex);
                 board.destroyRow(shape.activeShape);
-                shape.undo.reset();
-                shape.redo.reset();
+                // shape.undo.reset();
+                // shape.redo.reset();
                 shape.newBlock();
             }
         }
@@ -71,12 +71,12 @@
                     break;
                 case 65: //
                     drawer.unDraw(shape.activeShape);
-                    shape.rotate(shape.activeShape,1);
+                    shape.rotate(1);
                     drawer.draw(shape.activeShape);
                     break;
                 case 68:
                     drawer.unDraw(shape.activeShape);
-                    shape.rotate(shape.activeShape,0);
+                    shape.rotate(0);
                     drawer.draw(shape.activeShape);
                     break;
                 case 37: //left
@@ -88,8 +88,8 @@
                 case 40: //down
                     speed = Date.now();
                     if(!shape.move(0,1,0)) {
-                        shape.undo.reset();
-                        shape.redo.reset();
+                        // shape.undo.reset();
+                        // shape.redo.reset();
                         board.lockState(shape.activeShape,shape.activeShapeIndex);
                         board.destroyRow(shape.activeShape);
                         shape.newBlock();
@@ -133,19 +133,46 @@
             }
         }
 
+        this.createRow = function(row) {
+            row.forEach((value) => {
+                this.board.shift();
+                this.board.splice(value.index, 0, value.row);
+            })
+            this.drawBoard();
+        }
+
         this.destroyRow = function(array) {
+            let destroyedRows = [];
             for(let i=0;i<this.board.length;i++){
                 if(!this.board[i].includes(-1)){
-                    this.board.splice(i,1);
+                    destroyedRows.push({
+                        row: this.board.splice(i,1)[0],
+                        index: i,
+                    });
                     this.board.unshift(new Array(this.colums).fill(-1));
                     score += 50;
                     span.innerHTML = score;
                     this.drawBoard();
                 }
             }
+            destroyedRows.length ? shape.undo.push({
+                type: 2,
+                rows: destroyedRows,
+            }) : null;
+        }
+
+        this.unlockState = function(array) {
+            for(let i=0;i<array.length;i++){
+                for(let j=0;j<array[i].length;j++){
+                    if(array[i][j]){
+                        this.board[i+shape.y][j+shape.x] = -1;
+                    }
+                }
+            }
         }
 
         this.lockState = function(array, value) {
+            // let block = shape.undo.pop();
             for(let i=0;i<array.length;i++){
                 for(let j=0;j<array[i].length;j++){
                     if(array[i][j]){
@@ -158,6 +185,15 @@
                     }
                 }
             }
+            shape.undo.push({
+                type: 3,
+                block: {
+                    index: shape.activeShapeIndex,
+                    shape: shape.activeShape,
+                    x: shape.x,
+                    y: shape.y,
+                },
+            })
         }
     }
     //-----------------------------------------------------------------------------------------------------------------------------------//
@@ -172,11 +208,11 @@
                 }
             }
         }
-        this.unDraw = function(array, show, color) {
+        this.unDraw = function(array) {
             for(let i=0;i<array.length;i++){
                 for(let j=0;j<array.length;j++){
                     if(array[i][j] > 0){
-                        drawer.drawSquare(j+shape.x,i+shape.y, color ? color : board.backgroundColor);
+                        drawer.drawSquare(j+shape.x,i+shape.y, board.backgroundColor);
                     }
                 }
             }
@@ -242,12 +278,19 @@
         this.x = null;
         this.y = null;
         
-        this.newBlock = function() {
-            // 
-            this.activeShapeIndex = (Math.floor(Math.random()*10))%this.availableShapes.length;;
-            this.activeShape = this.availableShapes[this.activeShapeIndex];
-            this.x=0;
-            this.y=-2;
+        this.newBlock = function(block) {
+            if(block){
+                this.activeShape = block.shape;
+                this.activeShapeIndex = block.index;
+                this.x = block.x;
+                this.y = block.y;
+            }else{
+                // 
+                this.activeShapeIndex = (Math.floor(Math.random()*10))%this.availableShapes.length;
+                this.activeShape = this.availableShapes[this.activeShapeIndex];
+                this.x=0;
+                this.y=-2;
+            }
         }
 
         this.move = function(x, y, store) {
@@ -262,7 +305,6 @@
                     }
                     this.undo.push({
                         type: 1,
-                        shape: this.activeShapeIndex,
                         move: [-x, -y],
                     })
                 }
@@ -271,7 +313,7 @@
             return !coll;
         }
 
-        this.rotate = function(dir) {
+        this.rotate = function(dir, u) {
             var newArray = new Array(this.activeShape.length)
             for(let i=0;i<this.activeShape.length;i++){
                 newArray[i] = [];
@@ -282,11 +324,12 @@
                 };
             };
             if(!shape.collision(newArray,0,0)){
-                this.undo.push({
-                    type: 0,
-                    shape: this.activeShapeIndex,
-                    dir: (dir+1)%2,
-                });
+                if(!u){
+                    this.undo.push({
+                        type: 0,
+                        dir: (dir+1)%2,
+                    });
+                }
                 this.activeShape = newArray;
             }
         }
@@ -327,13 +370,29 @@
 
         this.undoStep = function() {
             if(!this.undo.isEmpty()){
+                speed = Date.now();
                 let step = this.undo.pop();
-                if(step.type === 1){    
-                    shape.move(step.move[0], step.move[1], 1);
-                    speed = Date.now();
-                    step.move[0] *= -1;
-                    step.move[1] *= -1;
-                    this.redo.push(step);
+                switch(step.type){
+                    case 0:
+                        drawer.unDraw(this.activeShape);
+                        this.rotate(step.dir,1);
+                        drawer.draw(this.activeShape);
+                        step.dir = (step.dir + 1)%2;
+                        this.redo.push(step);
+                        break;
+                    case 1:  
+                        this.move(step.move[0], step.move[1], 1);
+                        step.move[0] *= -1;
+                        step.move[1] *= -1;
+                        this.redo.push(step);
+                        break;
+                    case 2:
+                        board.createRow(step.rows);
+                        break;
+                    case 3:
+                        shape.newBlock(step.block);
+                        board.unlockState(shape.activeShape);
+                        break;
                 }
             }
         }
@@ -343,4 +402,4 @@
     //-----------------------------------------------------------------------------------------------------------------------------------//
 
 
-})();
+// })();
